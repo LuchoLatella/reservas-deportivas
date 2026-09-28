@@ -1,21 +1,13 @@
-import { Tabs } from 'expo-router';
+import { Stack } from 'expo-router';
+import 'react-native-reanimated';
 
-export default function TabLayout() {
+export default function RootLayout() {
   return (
-    <Tabs>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Inicio',
-        }}
+    <Stack>
+      <Stack.Screen
+        name="(tabs)"
+        options={{ headerShown: false }}
       />
-
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explorar',
-        }}
-      />
-    </Tabs>
+    </Stack>
   );
 }
