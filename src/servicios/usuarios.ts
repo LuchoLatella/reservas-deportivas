@@ -1,3 +1,7 @@
+/**
+ * Sólo usuarios de prueba, no autenticación real. No se debe usar en producción.
+ */
+
 import { usuariosMock } from '../mocks/usuarios';
 import { Usuario } from '../tipos/usuario';
 
