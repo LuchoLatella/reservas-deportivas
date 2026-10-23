@@ -1,17 +1,21 @@
+import { obtenerFechaRelativa } from '../utils/fechas';
+
+const fechaReservaExistente = obtenerFechaRelativa(1);
+
 import { Reserva } from '../tipos/reserva';
 
 export const reservasMock: Reserva[] = [
   {
     id: 'res-01',
-    turnoId: 'turno-01',
+    turnoId: `turno-esp-02-${fechaReservaExistente}-18`,
     espacioId: 'esp-02',
     usuarioId: 'usr-01',
     cantidadPersonas: 10,
     codigoQr: 'RES-01-QR-8F42A',
     estado: 'confirmada',
     ingresoEn: null,
-    creadaEn: '2026-09-28T10:30:00-03:00',
-    cancelableHasta: '2026-09-28T16:00:00-03:00',
+    creadaEn: new Date().toISOString(),
+    cancelableHasta: `${fechaReservaExistente}T14:00:00-03:00`,
   },
   {
     id: 'res-02',
