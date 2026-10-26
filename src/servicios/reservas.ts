@@ -16,12 +16,97 @@ export interface ResultadoCancelacion {
   reserva: Reserva;
 }
 
-// permitir consultar todas las reservas.
+function buscarTurno(turnoId: string): Turno | undefined {
+  return turnosMock.find((turno) => turno.id === turnoId);
+}
+
+function buscarReserva(reservaId: string): Reserva | undefined {
+  return reservasMock.find((reserva) => reserva.id === reservaId);
+}
+
+function esTurnoFuturo(turno: Turno): boolean {
+  const fechaHoraInicio = new Date(
+    `${turno.fecha}T${turno.inicio}:00`,
+  );
+
+  return (
+    !Number.isNaN(fechaHoraInicio.getTime()) &&
+    fechaHoraInicio.getTime() > Date.now()
+  );
+}
+
+function generarIdReserva(): string {
+  const base = Date.now();
+  let id = `res-${base}`;
+  let sufijo = 1;
+
+  while (reservasMock.some((reserva) => reserva.id === id)) {
+    id = `res-${base}-${sufijo}`;
+    sufijo += 1;
+  }
+
+  return id;
+}
+
+function generarCodigoQr(): string {
+  let codigo = '';
+
+  do {
+    codigo = `QR-${Date.now().toString(36).toUpperCase()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)
+      .toUpperCase()}`;
+  } while (reservasMock.some((reserva) => reserva.codigoQr === codigo));
+
+  return codigo;
+}
+
+function validarVinculoReservaTurno(
+  reserva: Reserva,
+  turno: Turno,
+): void {
+  if (
+    turno.espacioId !== reserva.espacioId ||
+    turno.estado !== 'reservado' ||
+    turno.reservaId !== reserva.id
+  ) {
+    throw new Error(
+      'La reserva y el turno no tienen una vinculación válida.',
+    );
+  }
+}
+
+function finalizarCancelacion(
+  reserva: Reserva,
+  turno: Turno,
+): Reserva {
+  validarVinculoReservaTurno(reserva, turno);
+
+  const indiceReserva = reservasMock.findIndex(
+    (item) => item.id === reserva.id,
+  );
+
+  if (indiceReserva === -1) {
+    throw new Error('La reserva no existe.');
+  }
+
+  const reservaCancelada: Reserva = {
+    ...reserva,
+    estado: 'cancelada',
+  };
+
+  // Primero actualizamos la reserva y luego liberamos su turno.
+  reservasMock[indiceReserva] = reservaCancelada;
+  turno.estado = 'libre';
+  turno.reservaId = null;
+
+  return reservaCancelada;
+}
+
 export async function obtenerReservas(): Promise<Reserva[]> {
   return reservasMock;
 }
 
-// permitir consultar las reservas de un usuario.
 export async function obtenerReservasPorUsuario(
   usuarioId: string,
 ): Promise<Reserva[]> {
@@ -30,60 +115,47 @@ export async function obtenerReservasPorUsuario(
   );
 }
 
-// permitir consultar una reserva por su id.
 export async function obtenerReservaPorId(
   id: string,
 ): Promise<Reserva | null> {
-  return reservasMock.find(
-    (reserva) => reserva.id === id,
-  ) ?? null;
+  return buscarReserva(id) ?? null;
 }
 
-// Buscar un turno por su id.
-function buscarTurno(turnoId: string): Turno | undefined {
-  return turnosMock.find((turno) => turno.id === turnoId);
-}
-
-// permite omprobar si el turno todavía no comenzó.
-function esTurnoFuturo(turno: Turno): boolean {
-  const fechaHoraInicio = new Date(
-    `${turno.fecha}T${turno.inicio}:00`,
-  );
-
-  return fechaHoraInicio.getTime() > Date.now();
-}
-
-// permitir crear una reserva nueva.
 export async function crearReserva(
   turnoId: string,
   usuarioId: string,
   cantidadPersonas: number,
 ): Promise<Reserva> {
-  // 1. Verificar que el usuario exista.
+  // 1. El usuario debe existir.
   const usuario = await obtenerUsuarioPorId(usuarioId);
 
   if (!usuario) {
     throw new Error('El usuario no existe.');
   }
 
-  // 2. Verificar que el turno exista.
+  // 2. El turno debe existir y estar libre.
   const turno = buscarTurno(turnoId);
 
   if (!turno) {
     throw new Error('El turno solicitado no existe.');
   }
 
-  // 3. Verificar que el turno esté disponible.
   if (turno.estado !== 'libre') {
     throw new Error('El turno no está disponible.');
   }
 
-  // 4. Verificar que el turno sea futuro.
+  // Un turno libre no debería tener una reserva asociada.
+  if (turno.reservaId !== null) {
+    throw new Error(
+      'El turno tiene datos inconsistentes y no puede reservarse.',
+    );
+  }
+
   if (!esTurnoFuturo(turno)) {
     throw new Error('No se pueden reservar turnos pasados.');
   }
 
-  // 5. Verificar la cantidad de personas.
+  // 3. La cantidad de personas debe ser válida.
   if (
     !Number.isInteger(cantidadPersonas) ||
     cantidadPersonas < 1
@@ -93,6 +165,7 @@ export async function crearReserva(
     );
   }
 
+  // 4. El espacio debe existir, estar activo y tener capacidad.
   const espacio = await obtenerEspacioPorId(turno.espacioId);
 
   if (!espacio || !espacio.activo) {
@@ -105,7 +178,7 @@ export async function crearReserva(
     );
   }
 
-  // 6. Contar las reservas confirmadas futuras del usuario.
+  // 5. Contar las reservas confirmadas cuyo turno aún no comenzó.
   const reservasActivas = reservasMock.filter((reserva) => {
     if (
       reserva.usuarioId !== usuarioId ||
@@ -127,7 +200,7 @@ export async function crearReserva(
     );
   }
 
-  // 7. Calcular el límite para cancelar automáticamente.
+  // 6. Calcular el límite de cancelación automática.
   const fechaHoraInicio = new Date(
     `${turno.fecha}T${turno.inicio}:00`,
   );
@@ -137,65 +210,68 @@ export async function crearReserva(
       HORAS_ANTICIPACION_CANCELACION * 60 * 60 * 1000,
   );
 
-  // 8. Crear el registro de la reserva.
+  // 7. Preparar la reserva sin modificar todavía el turno.
   const nuevaReserva: Reserva = {
-    id: `res-${Date.now()}`,
+    id: generarIdReserva(),
     turnoId: turno.id,
     espacioId: turno.espacioId,
     usuarioId,
     cantidadPersonas,
-    codigoQr: `QR-${Date.now().toString(36).toUpperCase()}`,
+    codigoQr: generarCodigoQr(),
     estado: 'confirmada',
     ingresoEn: null,
     creadaEn: new Date().toISOString(),
     cancelableHasta: cancelableHasta.toISOString(),
   };
 
-  // 9. Guardar la reserva y actualizar el turno.
+  // 8. Confirmar la operación una vez superadas las validaciones.
   reservasMock.push(nuevaReserva);
-
   turno.estado = 'reservado';
   turno.reservaId = nuevaReserva.id;
 
   return nuevaReserva;
 }
 
-// Cancelar una reserva.
 export async function cancelarReserva(
   reservaId: string,
   usuarioId: string,
 ): Promise<ResultadoCancelacion> {
-  // 1. Buscar la reserva.
-  const reserva = await obtenerReservaPorId(reservaId);
+  const reserva = buscarReserva(reservaId);
 
   if (!reserva) {
     throw new Error('La reserva no existe.');
   }
 
-  // 2. Verificar que pertenezca al usuario.
   if (reserva.usuarioId !== usuarioId) {
     throw new Error(
       'No podés cancelar una reserva de otro usuario.',
     );
   }
 
-  // 3. Verificar que siga confirmada.
   if (reserva.estado !== 'confirmada') {
     throw new Error(
       'La reserva ya no está confirmada y no se puede cancelar.',
     );
   }
 
-  // 4. Buscar el turno asociado.
   const turno = buscarTurno(reserva.turnoId);
 
   if (!turno) {
     throw new Error('No se encontró el turno de la reserva.');
   }
 
-  // 5. Comprobar el plazo de cancelación.
+  // No cancelar ni liberar un turno que no corresponda a la reserva.
+  validarVinculoReservaTurno(reserva, turno);
+
   const limiteCancelacion = new Date(reserva.cancelableHasta);
 
+  if (
+    Number.isNaN(limiteCancelacion.getTime())
+  ) {
+    throw new Error('La fecha límite de cancelación no es válida.');
+  }
+
+  // El límite exacto todavía está permitido.
   if (Date.now() > limiteCancelacion.getTime()) {
     return {
       cancelada: false,
@@ -206,24 +282,78 @@ export async function cancelarReserva(
     };
   }
 
-  // 6. Marcar la reserva como cancelada.
-  const indiceReserva = reservasMock.findIndex(
-    (item) => item.id === reservaId,
-  );
-
-  reservasMock[indiceReserva] = {
-    ...reserva,
-    estado: 'cancelada',
-  };
-
-  // 7. Liberar el turno.
-  turno.estado = 'libre';
-  turno.reservaId = null;
+  const reservaCancelada = finalizarCancelacion(reserva, turno);
 
   return {
     cancelada: true,
     requiereEncargado: false,
     mensaje: 'La reserva se canceló correctamente.',
-    reserva: reservasMock[indiceReserva],
+    reserva: reservaCancelada,
   };
+}
+
+/**
+ * Confirma una cancelación que ya superó el plazo automático.
+ * Solo puede ejecutarla un encargado o administrador.
+ * El contador se incrementa únicamente cuando la cancelación se concreta.
+ */
+export async function confirmarCancelacionTardia(
+  reservaId: string,
+  encargadoId: string,
+): Promise<Reserva> {
+  const encargado = await obtenerUsuarioPorId(encargadoId);
+
+  if (
+    !encargado ||
+    !['encargado', 'administrador'].includes(encargado.rol)
+  ) {
+    throw new Error(
+      'Solo un encargado o administrador puede confirmar esta cancelación.',
+    );
+  }
+
+  const reserva = buscarReserva(reservaId);
+
+  if (!reserva) {
+    throw new Error('La reserva no existe.');
+  }
+
+  if (reserva.estado !== 'confirmada') {
+    throw new Error(
+      'La reserva ya no está confirmada y no se puede cancelar.',
+    );
+  }
+
+  const turno = buscarTurno(reserva.turnoId);
+
+  if (!turno) {
+    throw new Error('No se encontró el turno de la reserva.');
+  }
+
+  validarVinculoReservaTurno(reserva, turno);
+
+  const limiteCancelacion = new Date(reserva.cancelableHasta);
+
+  if (
+    Number.isNaN(limiteCancelacion.getTime()) ||
+    Date.now() <= limiteCancelacion.getTime()
+  ) {
+    throw new Error(
+      'La reserva todavía está dentro del plazo de cancelación automática.',
+    );
+  }
+
+  const usuario = await obtenerUsuarioPorId(reserva.usuarioId);
+
+  if (!usuario) {
+    throw new Error(
+      'No se encontró al usuario titular de la reserva.',
+    );
+  }
+
+  // Todas las validaciones se completaron antes de modificar los datos.
+  const reservaCancelada = finalizarCancelacion(reserva, turno);
+  usuario.cancelacionesTardias += 1;
+
+  return reservaCancelada;
 }
