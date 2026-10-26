@@ -16,3 +16,31 @@ export async function obtenerReservasFijasPorEspacio(
       reserva.activa,
   );
 }
+
+export async function tieneReservaFija(
+  espacioId: string,
+  fecha: string,
+  horaInicio: string,
+  horaFin: string,
+): Promise<boolean> {
+  const [year, month, day] = fecha.split('-').map(Number);
+  const diaSemana = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+
+  const reservasFijas = await obtenerReservasFijasPorEspacio(espacioId);
+
+  return reservasFijas.some((rf) => {
+    if (rf.dia !== diaSemana) {
+      return false;
+    }
+
+    if (fecha < rf.desde) {
+      return false;
+    }
+
+    if (rf.hasta && fecha > rf.hasta) {
+      return false;
+    }
+
+    return horaInicio < rf.fin && horaFin > rf.inicio;
+  });
+}
