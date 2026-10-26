@@ -38,7 +38,7 @@ export async function obtenerEspacios(
 }
 
 /**
- * Consulta un espacio por su ID identificador único.
+ * consulta un espacio por su ID identificador único.
  */
 export async function obtenerEspacioPorId(
   id: string,
