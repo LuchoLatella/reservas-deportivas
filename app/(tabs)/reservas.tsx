@@ -1,8 +1,8 @@
-import { obtenerReservasPorUsuario } from '@/servicios';
-import { Reserva } from '@/tipos/reserva';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { obtenerReservasPorUsuario } from '../../src/servicios';
+import { Reserva } from '../../src/tipos/reserva';
 
 export default function MisReservasScreen() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function MisReservasScreen() {
         renderItem={({ item }) => (
           <Pressable
             style={styles.card}
-            onPress={() => router.push({ pathname: '/reserva/[id]', params: { id: item.id } })}
+            onPress={() => router.push({ pathname: '/reserva/[id]', params: { id: item.id } } as any)}
           >
             <Text style={styles.cardTitle}>Reserva #{item.id}</Text>
             <Text style={styles.cardStatus}>Estado: {item.estado.toUpperCase()}</Text>

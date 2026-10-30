@@ -151,3 +151,6 @@ export async function obtenerTurnosDisponibles(
       turno.reservaId === null,
   );
 }
+  export async function obtenerTurnoPorId(id: string): Promise<Turno | null> {
+    return turnosMock.find((turno) => turno.id === id) ?? null;
+}

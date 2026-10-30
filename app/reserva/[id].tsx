@@ -1,8 +1,8 @@
-import { cancelarReserva, obtenerReservaPorId } from '@/servicios';
-import { Reserva } from '@/tipos/reserva';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { cancelarReserva, obtenerReservaPorId } from '../../src/servicios';
+import { Reserva } from '../../src/tipos/reserva';
 
 export default function DetalleReservaScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

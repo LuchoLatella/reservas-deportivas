@@ -1,10 +1,10 @@
-import { crearReserva, obtenerEspacioPorId, obtenerTurnosDisponibles } from '@/servicios';
-import { Espacio } from '@/tipos/espacio';
-import { Turno } from '@/tipos/turno';
-import { obtenerFechaRelativa } from '@/utils/fechas';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { crearReserva, obtenerEspacioPorId, obtenerTurnosDisponibles } from '../../src/servicios';
+import { Espacio } from '../../src/tipos/espacio';
+import { Turno } from '../../src/tipos/turno';
+import { obtenerFechaRelativa } from '../../src/utils/fechas';
 
 export default function DetalleEspacioScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,7 +32,8 @@ export default function DetalleEspacioScreen() {
       // Usamos el usuario de prueba 'usr-01'
       const nuevaReserva = await crearReserva(turnoId, 'usr-01', 4);
       Alert.alert('¡Éxito!', 'Reserva realizada correctamente.', [
-        { text: 'Ver Reserva', onPress: () => router.push({ pathname: '/reserva/[id]', params: { id: nuevaReserva.id } }) },
+        { text: 'Ver Reserva', 
+        onPress: () => router.push({ pathname: '/reserva/[id]', params: { id: nuevaReserva.id } } as any) },
       ]);
     } catch (error: any) {
       Alert.alert('Error al reservar', error.message);
@@ -48,7 +49,7 @@ export default function DetalleEspacioScreen() {
       <Text style={styles.price}>${espacio.precioPorHora} / hora</Text>
 
       <Text style={styles.sectionTitle}>Reglas del espacio:</Text>
-      {espacio.reglas.map((r, i) => (
+      {espacio.reglas.map((r: string, i: number) => (
         <Text key={i} style={styles.ruleItem}>• {r}</Text>
       ))}
 

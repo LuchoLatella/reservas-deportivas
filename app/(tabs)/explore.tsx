@@ -1,6 +1,3 @@
-import { obtenerDeportes, obtenerEspacios } from '@/servicios';
-import { Deporte } from '@/tipos/deporte';
-import { Espacio } from '@/tipos/espacio';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -11,6 +8,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { obtenerDeportes, obtenerEspacios } from '../../src/servicios';
+import { Deporte } from '../../src/tipos/deporte';
+import { Espacio } from '../../src/tipos/espacio';
 
 export default function ExplorarScreen() {
   const router = useRouter();
@@ -69,7 +69,7 @@ export default function ExplorarScreen() {
         renderItem={({ item }) => (
           <Pressable
             style={styles.card}
-            onPress={() => router.push({ pathname: '/espacio/[id]', params: { id: item.id } })}
+          onPress={() => router.push({ pathname: '/espacio/[id]', params: { id: item.id } } as any)}
           >
             <Text style={styles.cardTitle}>{item.nombre}</Text>
             <Text style={styles.cardSubtitle}>{item.complejo}</Text>
