@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { UsuarioServicio } from "../../src/servicios/usuarios";
 
 export default function RegistroPantalla() {
@@ -36,7 +36,7 @@ export default function RegistroPantalla() {
       Alert.alert(
         "Cuenta Creada",
         "Tu registro offline/local se completó. Ya podés iniciar sesión con tus credenciales.",
-        [{ text: "OK", onPress: () => router.replace("/(auth)/login") }],
+        [{ text: "OK", onPress: () => router.replace("/(auth)/login" as any) }],
       );
     } catch (err: any) {
       const mensajeError =

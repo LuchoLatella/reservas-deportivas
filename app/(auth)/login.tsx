@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { UsuarioServicio } from "../../src/servicios/usuarios";
 
 export default function LoginPantalla() {
@@ -16,14 +16,12 @@ export default function LoginPantalla() {
   const [email, setEmail] = useState("");
   const [contrasenia, setContrasenia] = useState("");
   const [cargando, setCargando] = useState(false);
-  
-  
 
   // Intentar reingreso biométrico automático al abrir la pantalla
   useEffect(() => {
     async function iniciarBiometriaAutomatica() {
       const resultado = await UsuarioServicio.autenticarBiometria();
-      if (resultado) {
+      if (resultado && resultado.exito && resultado.usuario) {
         Alert.alert(
           "Éxito",
           `Bienvenido de vuelta, ${resultado.usuario.nombre}`,
@@ -35,12 +33,6 @@ export default function LoginPantalla() {
   }, []);
 
   const manejarLoginClasico = async () => {
-    // Línea de diagnóstico temporal:
-    Alert.alert(
-      "Diagnóstico de Campos",
-      `Email detectado: "${email}"\nContraseña detectada: "${contrasenia}"`,
-    );
-
     if (!email || !contrasenia) {
       Alert.alert(
         "Campos incompletos",
@@ -51,26 +43,28 @@ export default function LoginPantalla() {
 
     setCargando(true);
     try {
-      // Invocamos tu servicio del Integrante 3 (persiste SecureStore y SQLite automáticamente)
       const respuesta = await UsuarioServicio.iniciarSesion(email, contrasenia);
-      Alert.alert(
-        "Ingreso Exitoso",
-        `Hola, ${respuesta.usuario.nombre} (${respuesta.usuario.rol})`,
-      );
-      router.replace("/(tabs)");
+      if (respuesta.exito && respuesta.usuario) {
+        Alert.alert(
+          "Ingreso Exitoso",
+          `Hola, ${respuesta.usuario.nombre} (${respuesta.usuario.rol})`,
+        );
+        router.replace("/(tabs)");
+      } else {
+        Alert.alert("Error de Autenticación", respuesta.mensaje || "Credenciales inválidas.");
+      }
     } catch (err: any) {
-      // Manejo de errores tipados según requerimiento de la cátedra
       const mensajeError =
         err?.error?.mensaje || "Ocurrió un error inesperado al iniciar sesión.";
       Alert.alert("Error de Autenticación", mensajeError);
     } finally {
       setCargando(false);
     }
-  };;
+  };
 
   const lanzarBiometriaManual = async () => {
     const resultado = await UsuarioServicio.autenticarBiometria();
-    if (resultado) {
+    if (resultado && resultado.exito && resultado.usuario) {
       router.replace("/(tabs)");
     } else {
       Alert.alert(
@@ -83,13 +77,14 @@ export default function LoginPantalla() {
   return (
     <View style={styles.contenedor}>
       <Text style={styles.titulo}>Reservas Deportivas</Text>
+      <Text style={styles.subtitulo}>Ingresá a tu cuenta</Text>
 
       <TextInput
         style={styles.input}
         placeholder="Correo electrónico"
         placeholderTextColor="#999"
         value={email}
-        onChangeText={(texto) => setEmail(texto)} // <-- Asegura que guarde el texto
+        onChangeText={(texto) => setEmail(texto)}
         autoCapitalize="none"
         keyboardType="email-address"
         editable={!cargando}
@@ -100,7 +95,7 @@ export default function LoginPantalla() {
         placeholder="Contraseña"
         placeholderTextColor="#999"
         value={contrasenia}
-        onChangeText={(texto) => setContrasenia(texto)} // <-- Asegura que guarde el texto
+        onChangeText={(texto) => setContrasenia(texto)}
         secureTextEntry
         editable={!cargando}
       />
@@ -129,7 +124,7 @@ export default function LoginPantalla() {
 
       <TouchableOpacity
         style={styles.botonEnlace}
-        onPress={() => router.push("/(auth)/registro")}
+        onPress={() => router.push("/(auth)/registro" as any)}
         disabled={cargando}
       >
         <Text style={styles.textoEnlace}>
