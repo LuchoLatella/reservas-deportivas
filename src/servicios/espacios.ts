@@ -1,58 +1,93 @@
 import { espaciosMock } from '../mocks/espacios';
 import { Espacio } from '../tipos/espacio';
+import { clienteApi } from './api';
 
-export interface FiltrosEspacios {
+export interface FiltrosEspacio {
   deporteId?: string;
   complejo?: string;
+  iluminacion?: boolean;
+  techado?: boolean;
   busqueda?: string;
   incluirInactivos?: boolean;
 }
 
-/**
- * Consulta la lista de espacios deportivos permitiendo filtrar por deporte,
- * complejo o búsqueda por texto, respetando el estado activo por defecto.
- */
-export async function obtenerEspacios(
-  filtros: FiltrosEspacios = {},
-): Promise<Espacio[]> {
-  const termino = filtros.busqueda?.trim().toLowerCase();
+export async function obtenerEspacios(filtros?: FiltrosEspacio): Promise<Espacio[]> {
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      const params = new URLSearchParams();
+      if (filtros?.deporteId) params.append('deporteId', filtros.deporteId);
+      if (filtros?.complejo) params.append('complejo', filtros.complejo);
+      if (filtros?.iluminacion !== undefined) params.append('iluminacion', String(filtros.iluminacion));
+      if (filtros?.techado !== undefined) params.append('techado', String(filtros.techado));
 
-  return espaciosMock.filter((espacio) => {
-    if (!filtros.incluirInactivos && !espacio.activo) {
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const datos = await clienteApi<Espacio[]>(`/espacios${queryString}`);
+      
+      if (datos && Array.isArray(datos)) {
+        let resultado = datos;
+        if (!filtros?.incluirInactivos) {
+          resultado = resultado.filter((e) => e.activo !== false);
+        }
+        if (filtros?.busqueda) {
+          const b = filtros.busqueda.toLowerCase();
+          resultado = resultado.filter(
+            (e) => e.nombre.toLowerCase().includes(b) || e.complejo.toLowerCase().includes(b)
+          );
+        }
+        return resultado;
+      }
+    } catch {}
+  }
+
+  let resultado = [...espaciosMock];
+
+  if (!filtros?.incluirInactivos) {
+    resultado = resultado.filter((e) => e.activo !== false);
+  }
+
+  if (filtros?.deporteId) {
+    resultado = resultado.filter((e: any) => {
+      if (e.deporteId) return e.deporteId === filtros.deporteId;
+      if (Array.isArray(e.deportesIds)) return e.deportesIds.includes(filtros.deporteId);
       return false;
-    }
+    });
+  }
 
-    const coincideDeporte =
-      !filtros.deporteId || espacio.deporteId === filtros.deporteId;
+  if (filtros?.complejo) {
+    resultado = resultado.filter((e) => e.complejo.toLowerCase() === filtros.complejo!.toLowerCase());
+  }
 
-    const coincideComplejo =
-      !filtros.complejo || espacio.complejo === filtros.complejo;
+  if (filtros?.iluminacion !== undefined) {
+    resultado = resultado.filter((e) => e.iluminacion === filtros.iluminacion);
+  }
 
-    const coincideBusqueda =
-      !termino ||
-      espacio.nombre.toLowerCase().includes(termino) ||
-      espacio.complejo.toLowerCase().includes(termino);
+  if (filtros?.techado !== undefined) {
+    resultado = resultado.filter((e) => e.techado === filtros.techado);
+  }
 
-    return coincideDeporte && coincideComplejo && coincideBusqueda;
-  });
+  if (filtros?.busqueda) {
+    const b = filtros.busqueda.toLowerCase();
+    resultado = resultado.filter(
+      (e) => e.nombre.toLowerCase().includes(b) || e.complejo.toLowerCase().includes(b)
+    );
+  }
+
+  return resultado;
 }
 
-/**
- * consulta un espacio por su ID identificador único.
- */
-export async function obtenerEspacioPorId(
-  id: string,
-): Promise<Espacio | null> {
-  return espaciosMock.find((espacio) => espacio.id === id) ?? null;
+export async function obtenerEspacioPorId(id: string): Promise<Espacio | null> {
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      const espacio = await clienteApi<Espacio>(`/espacios/${id}`);
+      if (espacio) return espacio;
+    } catch {}
+  }
+
+  return espaciosMock.find((e) => e.id === id) ?? null;
 }
 
-/**
- * Devuelve el listado de nombres de complejos deportivos únicos.
- */
 export async function obtenerComplejos(): Promise<string[]> {
-  const complejos = espaciosMock
-    .filter((e) => e.activo)
-    .map((e) => e.complejo);
-
-  return Array.from(new Set(complejos));
+  const espacios = await obtenerEspacios({ incluirInactivos: true });
+  const complejosUnicos = Array.from(new Set(espacios.map((e) => e.complejo)));
+  return complejosUnicos;
 }

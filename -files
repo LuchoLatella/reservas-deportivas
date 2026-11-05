@@ -1,0 +1,22 @@
+* [33m08edf26[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/rama-Luciano[m[33m, [m[1;31morigin/rama-Gustavo[m[33m, [m[1;31morigin/rama-Dario[m[33m, [m[1;31morigin/rama-Agostina[m[33m, [m[1;31morigin/main[m[33m, [m[1;32mrama-Luciano[m[33m, [m[1;32mrama-Gustavo[m[33m, [m[1;32mrama-Dario[m[33m, [m[1;32mrama-Agostina[m[33m)[m Fix de sintaxis en login.tsx e integración final de auth
+*   [33mc23002b[m Merge e integración de rama-Dario resolviendo conflictos con main
+[32m|[m[33m\[m  
+[32m|[m * [33m3db1b48[m Actualización: Agregada nueva carpeta al flujo de la aplicación
+[32m|[m * [33ma390389[m Entrega Punto 3: Autenticación, persistencias SecureStore y SQLite offline funcionales - Dario
+* [33m1bbba42[m Completar e integrar flujo de Espacios y Reservas
+* [33m01f50ca[m  creado el test de servicio de reservas
+* [33m965be0a[m  app/ reservas por id
+* [33md4f58b6[m  app/ reservas.tsx Ver reservas
+* [33maac5836[m  app/espacio/ id para Detalle del Espacio y Selección de Turno
+* [33m4853968[m  app/ explore.tsx Pantallas de la Aplicación (Expo Router)
+* [33ma136c95[m  se crea el archivo services/detalles de reservas
+* [33mfd54911[m  se crea el archivo services/disponiblidad
+*   [33m55cdf95[m merge de rama-Luciano completo
+[34m|[m[35m\[m  
+[34m|[m * [33m879287b[m Completadas las etapas de  capa de servicios, tipos, mocks y pruebas unitarias
+[34m|[m * [33mec9351e[m agregado el test de usuarios y su services
+[34m|[m * [33m5f28aa3[m agregado el test de reservas fijas y su services
+[34m|[m * [33m50fe4b7[m agregado el test de espacios y su services
+[34m|[m * [33m970d215[m actualizado turnos para test
+[34m|[m * [33m2c2638c[m actualizado turnos para validar con las pruebas y regla de negocio
+[34m|[m * [33m9964947[m actualizado reservas.test.ts para considerar reglas de negocio
