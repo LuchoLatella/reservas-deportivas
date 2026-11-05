@@ -1,50 +1,44 @@
-# Welcome to your Expo app 👋
+# Reservas Deportivas — Mobile Application (React Native / Expo)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicación móvil desarrollada en React Native con Expo Router para la gestión y reserva de turnos en complejos deportivos. El sistema soporta arquitectura desacoplada REST API con un mecanismo de fallback local a Mocks para operar offline o ejecutar la suite de pruebas automatizadas.
 
-## Get started
+---
 
-1. Install dependencies
+## 🚀 Requisitos e Instalación
 
-   ```bash
-   npm install
-   ```
+### Prerrequisitos
+- **Node.js**: v18 o superior
+- **PowerShell / Terminal**: Para ejecutar comandos de entorno
+- **Expo Go**: App móvil (versión compatible con SDK 57) instalada en dispositivo físico o un emulador configurado.
 
-2. Start the app
+### Pasos de Instalación
+```powershell
+# 1. Clonar el repositorio
+git clone <URL_DEL_REPOSITO>
+cd reservas-deportivas
 
-   ```bash
-   npx expo start
-   ```
+# 2. Instalar dependencias
+npm install
+⚙️ Configuración de Variables de EntornoCrea un archivo .env en la raíz del proyecto para definir la URL del servidor backend en NestJS:Fragmento de códigoEXPO_PUBLIC_API_URL=http://localhost:3000
+Nota: Para probar en dispositivos físicos mediante Expo Go, reemplaza localhost por la IP local de tu máquina en la red local (ejemplo: http://192.168.1.50:3000).🧪 Ejecución y Pruebas AutomatizadasLa aplicación cuenta con una suite completa de unit/integration testing implementada con Jest.PowerShell# Verificar tipos con el compilador de TypeScript
+npx tsc --noEmit
 
-In the output, you'll find options to open the app in a
+# Ejecutar la suite completa de pruebas (54 tests passing)
+npm test -- --runInBand
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+# Ejecutar la aplicación en entorno de desarrollo con Expo Go
+npx expo start
+🏗️ Arquitectura de Software y Capa de ServiciosPatrón Client-Service con Dual Storage (API / Mock Fallback)El cliente HTTP (src/servicios/api.ts) intercepta las peticiones REST. En entornos donde la API remota no responde o durante la ejecución de los tests (process.env.NODE_ENV === 'test'), los servicios conmutan automáticamente a la capa de datos en memoria (src/mocks/), garantizando:Alta Disponibilidad Offline: La aplicación sigue operando en dispositivos sin conectividad.Deterministic Test Suite: Las reglas de negocio (4hs de cancelación, 3 reservas máximas por usuario, filtrado de turnos de la jornada) son validadas en 7 test suites aisladas.Diagrama Simplificado de Arquitectura[ UI Screens (Expo Router) ]
+         │
+         ▼
+[ Capa de Servicios (espacios, reservas, turnos, usuarios) ]
+         │
+   ┌─────┴────────────────────────────────┐
+   │                                      │
+(REST API Dispo?)                   (Modo Test / Offline?)
+   │                                      │
+   ▼                                      ▼
+[ NestJS Backend API ]             [ In-Memory Mocks Store ]
+(JWT / REST Endpoints)             (Mocks locales + Fallback)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+📋 Mapeo de Endpoints REST IntegradosDominioMétodo RESTEndpointFunción en ServicioEspaciosGET/espacios?busqueda=&techado=&iluminacion=obtenerEspacios()EspaciosGET/espacios/:idobtenerEspacioPorId()TurnosGET/espacios/:id/turnos?fecha=obtenerTurnosDisponibles()ReservasPOST/reservascrearReserva()ReservasGET/yo/reservas?cuando=proximas|pasadasobtenerReservasUsuario()ReservasPOST/reservas/:id/cancelacioncancelarReserva()PerfilGET / PATCH/yoclienteApi('/yo')
