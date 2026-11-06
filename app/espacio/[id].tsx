@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +17,9 @@ import { crearReserva } from '../../src/servicios/reservas';
 import { obtenerTurnosDisponibles } from '../../src/servicios/turnos';
 import { Espacio } from '../../src/tipos/espacio';
 import { Turno } from '../../src/tipos/turno';
+
+const IMAGEN_DEFAULT =
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&auto=format&fit=crop&q=80';
 
 export default function PantallaDetalleEspacio() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -95,11 +99,17 @@ export default function PantallaDetalleEspacio() {
     );
   }
 
-  // Puntuación promedio por defecto o desde la entidad
   const promedioEstrellas = (espacio as any).valoracionPromedio ?? 4.5;
+  const urlFoto =
+    espacio.imagenes && espacio.imagenes.length > 0
+      ? espacio.imagenes[0]
+      : (espacio as any).imagenUrl || IMAGEN_DEFAULT;
 
   return (
     <ScrollView style={styles.container}>
+      {/* Banner / Foto Principal */}
+      <Image source={{ uri: urlFoto }} style={styles.heroImagen} resizeMode="cover" />
+
       {/* Encabezado e Info General */}
       <View style={styles.cardHeader}>
         <Text style={styles.titulo}>{espacio.nombre}</Text>
@@ -107,9 +117,7 @@ export default function PantallaDetalleEspacio() {
 
         <View style={styles.ratingRow}>
           <EstrellasRating puntuacion={promedioEstrellas} tamano={20} />
-          <Text style={styles.ratingTexto}>
-            {promedioEstrellas.toFixed(1)} / 5.0
-          </Text>
+          <Text style={styles.ratingTexto}>{promedioEstrellas.toFixed(1)} / 5.0</Text>
         </View>
 
         <View style={styles.badgesRow}>
@@ -119,6 +127,25 @@ export default function PantallaDetalleEspacio() {
         </View>
 
         <Text style={styles.precioText}>${espacio.precioPorHora} / hora</Text>
+      </View>
+
+      {/* Detalles Técnicos y Reglas */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Detalles del Espacio</Text>
+        <Text style={styles.detallesText}>
+          🌱 Superficie: {espacio.superficie || 'No especificada'}
+        </Text>
+
+        {espacio.reglas && espacio.reglas.length > 0 && (
+          <View style={styles.reglasBox}>
+            <Text style={styles.reglasTitle}>📋 Reglas de la cancha:</Text>
+            {espacio.reglas.map((regla, index) => (
+              <Text key={index} style={styles.reglaItem}>
+                • {regla}
+              </Text>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Selección de Turnos Disponibles */}
@@ -205,6 +232,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f4f6f8',
   },
+  heroImagen: {
+    width: '100%',
+    height: 180,
+  },
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -272,7 +303,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#1c1e21',
-    marginBottom: 12,
+    marginBottom: 10,
+  },
+  detallesText: {
+    fontSize: 14,
+    color: '#444',
+  },
+  reglasBox: {
+    marginTop: 10,
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+  },
+  reglasTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 6,
+  },
+  reglaItem: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 2,
   },
   noTurnosText: {
     color: '#65676b',
