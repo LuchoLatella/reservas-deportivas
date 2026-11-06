@@ -17,6 +17,7 @@ import { crearReserva } from '../../src/servicios/reservas';
 import { obtenerTurnosDisponibles } from '../../src/servicios/turnos';
 import { Espacio } from '../../src/tipos/espacio';
 import { Turno } from '../../src/tipos/turno';
+import { reproducirSonidoExito } from '../../src/utils/sonido';
 
 const IMAGEN_DEFAULT =
   'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&auto=format&fit=crop&q=80';
