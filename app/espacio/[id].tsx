@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Image,
   ScrollView,
   StyleSheet,
@@ -18,6 +19,8 @@ import { obtenerTurnosDisponibles } from '../../src/servicios/turnos';
 import { Espacio } from '../../src/tipos/espacio';
 import { Turno } from '../../src/tipos/turno';
 import { reproducirSonidoExito } from '../../src/utils/sonido';
+
+const { width: ANCHO_PANTALLA } = Dimensions.get('window');
 
 const IMAGEN_DEFAULT =
   'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&auto=format&fit=crop&q=80';
@@ -65,7 +68,7 @@ export default function PantallaDetalleEspacio() {
     setReservando(false);
 
     if (resultado.exito) {
-      await reproducirSonidoExito(); //  Efecto sonoro de éxito
+      await reproducirSonidoExito(); // Efecto sonoro de éxito
       Alert.alert(
         '¡Reserva Confirmada!',
         'Tu turno fue reservado con éxito. Podés revisarlo en la sección Mis Reservas.',
@@ -102,15 +105,38 @@ export default function PantallaDetalleEspacio() {
   }
 
   const promedioEstrellas = (espacio as any).valoracionPromedio ?? 4.5;
-  const urlFoto =
+  
+  // Si existen varias imágenes en el array las toma; de lo contrario usa el fallback
+  const listaFotos =
     espacio.imagenes && espacio.imagenes.length > 0
-      ? espacio.imagenes[0]
-      : (espacio as any).imagenUrl || IMAGEN_DEFAULT;
+      ? espacio.imagenes
+      : [(espacio as any).imagenUrl || IMAGEN_DEFAULT];
 
   return (
     <ScrollView style={styles.container}>
-      {/* Banner / Foto Principal */}
-      <Image source={{ uri: urlFoto }} style={styles.heroImagen} resizeMode="cover" />
+      {/* Carrusel Deslizable de Fotos */}
+      <View style={styles.carruselContainer}>
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          style={styles.carruselScroll}
+        >
+          {listaFotos.map((url, index) => (
+            <Image
+              key={index}
+              source={{ uri: url }}
+              style={styles.heroImagen}
+              resizeMode="cover"
+            />
+          ))}
+        </ScrollView>
+        {listaFotos.length > 1 && (
+          <View style={styles.badgeCarrusel}>
+            <Text style={styles.badgeCarruselTexto}>📷 Deslizá para ver más</Text>
+          </View>
+        )}
+      </View>
 
       {/* Encabezado e Info General */}
       <View style={styles.cardHeader}>
@@ -234,9 +260,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f4f6f8',
   },
+  carruselContainer: {
+    position: 'relative',
+    height: 200,
+  },
+  carruselScroll: {
+    width: ANCHO_PANTALLA,
+    height: 200,
+  },
   heroImagen: {
-    width: '100%',
-    height: 180,
+    width: ANCHO_PANTALLA,
+    height: 200,
+  },
+  badgeCarrusel: {
+    position: 'absolute',
+    bottom: 10,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeCarruselTexto: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
   },
   center: {
     flex: 1,

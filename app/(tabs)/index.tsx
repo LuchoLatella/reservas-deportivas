@@ -50,7 +50,7 @@ export default function PantallaCatalogo() {
           });
         }
       } catch (e) {
-        // En emuladores o sin permisos, continúa sin ubicación
+        // En emuladores o sin permisos, continúa sin ubicación de forma limpia
       }
     })();
   }, []);
@@ -128,6 +128,14 @@ export default function PantallaCatalogo() {
 
   return (
     <View style={styles.container}>
+      {/* Header Destacado */}
+      <View style={styles.headerBanner}>
+        <Text style={styles.headerSaludo}>¡Hola, Jugador! 👋</Text>
+        <Text style={styles.headerSubtitulo}>
+          Encontrá y reservá tu cancha ideal en segundos
+        </Text>
+      </View>
+
       {/* Buscador */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -187,8 +195,10 @@ export default function PantallaCatalogo() {
           )}
 
           {espacios.map((espacio) => {
-            const lat = espacio.coordenadas?.latitud ?? (espacio as any).latitud ?? -31.8495;
-            const lng = espacio.coordenadas?.longitud ?? (espacio as any).longitud ?? -59.0267;
+            const lat =
+              espacio.coordenadas?.latitud ?? (espacio as any).latitud ?? -31.8495;
+            const lng =
+              espacio.coordenadas?.longitud ?? (espacio as any).longitud ?? -59.0267;
 
             return (
               <Marker
@@ -229,6 +239,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f4f6f8',
+  },
+  headerBanner: {
+    backgroundColor: '#0066cc',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 14,
+  },
+  headerSaludo: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  headerSubtitulo: {
+    fontSize: 13,
+    color: '#e0e0e0',
+    marginTop: 2,
   },
   searchContainer: {
     padding: 12,
