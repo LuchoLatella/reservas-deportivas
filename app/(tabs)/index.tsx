@@ -20,6 +20,10 @@ import { calcularDistanciaKm } from '../../src/utils/distancia';
 const IMAGEN_DEFAULT =
   'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&auto=format&fit=crop&q=80';
 
+// Coordenadas por defecto (Polideportivo Municipal de Villaguay)
+const LAT_DEFAULT = -31.8495;
+const LNG_DEFAULT = -59.0267;
+
 export default function PantallaCatalogo() {
   const router = useRouter();
   const [espacios, setEspacios] = useState<Espacio[]>([]);
@@ -72,10 +76,10 @@ export default function PantallaCatalogo() {
   }, [busqueda, soloTechado, soloIluminado]);
 
   const regionInicial = {
-    latitude: ubicacionUsuario?.lat ?? -31.8495,
-    longitude: ubicacionUsuario?.lng ?? -59.0267,
-    latitudeDelta: 0.03,
-    longitudeDelta: 0.03,
+    latitude: ubicacionUsuario?.lat ?? LAT_DEFAULT,
+    longitude: ubicacionUsuario?.lng ?? LNG_DEFAULT,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
   };
 
   const renderItemEspacio = ({ item }: { item: Espacio }) => {
@@ -84,8 +88,11 @@ export default function PantallaCatalogo() {
         ? item.imagenes[0]
         : (item as any).imagenUrl || IMAGEN_DEFAULT;
 
-    const latCancha = item.coordenadas?.latitud ?? (item as any).latitud;
-    const lngCancha = item.coordenadas?.longitud ?? (item as any).longitud;
+    // Extraer coordenadas soportando la API de Docker y Mock local
+    const latCancha =
+      item.coordenadas?.latitud ?? (item as any).latitud ?? LAT_DEFAULT;
+    const lngCancha =
+      item.coordenadas?.longitud ?? (item as any).longitud ?? LNG_DEFAULT;
 
     const distancia =
       ubicacionUsuario && latCancha && lngCancha
@@ -182,42 +189,48 @@ export default function PantallaCatalogo() {
           <ActivityIndicator size="large" color="#0066cc" />
         </View>
       ) : vistaMapa ? (
-        <MapView style={styles.mapa} initialRegion={regionInicial}>
-          {ubicacionUsuario && (
-            <Marker
-              coordinate={{
-                latitude: ubicacionUsuario.lat,
-                longitude: ubicacionUsuario.lng,
-              }}
-              title="Tu Ubicación"
-              pinColor="blue"
-            />
-          )}
-
-          {espacios.map((espacio) => {
-            const lat =
-              espacio.coordenadas?.latitud ?? (espacio as any).latitud ?? -31.8495;
-            const lng =
-              espacio.coordenadas?.longitud ?? (espacio as any).longitud ?? -59.0267;
-
-            return (
+        <View style={styles.mapaContainer}>
+          <MapView style={styles.mapa} initialRegion={regionInicial}>
+            {ubicacionUsuario && (
               <Marker
-                key={espacio.id}
-                coordinate={{ latitude: lat, longitude: lng }}
-                title={espacio.nombre}
-                description={`${espacio.complejo} - $${espacio.precioPorHora}/h`}
-              >
-                <Callout onPress={() => router.push(`/espacio/${espacio.id}` as any)}>
-                  <View style={styles.calloutBox}>
-                    <Text style={styles.calloutTitle}>{espacio.nombre}</Text>
-                    <Text style={styles.calloutSub}>{espacio.complejo}</Text>
-                    <Text style={styles.calloutVer}>Toca para ver turnos</Text>
-                  </View>
-                </Callout>
-              </Marker>
-            );
-          })}
-        </MapView>
+                coordinate={{
+                  latitude: ubicacionUsuario.lat,
+                  longitude: ubicacionUsuario.lng,
+                }}
+                title="Tu Ubicación"
+                pinColor="blue"
+              />
+            )}
+
+            {espacios.map((espacio) => {
+              const lat =
+                espacio.coordenadas?.latitud ??
+                (espacio as any).latitud ??
+                LAT_DEFAULT;
+              const lng =
+                espacio.coordenadas?.longitud ??
+                (espacio as any).longitud ??
+                LNG_DEFAULT;
+
+              return (
+                <Marker
+                  key={espacio.id}
+                  coordinate={{ latitude: Number(lat), longitude: Number(lng) }}
+                  title={espacio.nombre}
+                  description={`${espacio.complejo} - $${espacio.precioPorHora}/h`}
+                >
+                  <Callout onPress={() => router.push(`/espacio/${espacio.id}` as any)}>
+                    <View style={styles.calloutBox}>
+                      <Text style={styles.calloutTitle}>{espacio.nombre}</Text>
+                      <Text style={styles.calloutSub}>{espacio.complejo}</Text>
+                      <Text style={styles.calloutVer}>Toca para ver turnos</Text>
+                    </View>
+                  </Callout>
+                </Marker>
+              );
+            })}
+          </MapView>
+        </View>
       ) : (
         <FlatList
           data={espacios}
@@ -371,9 +384,14 @@ const styles = StyleSheet.create({
     color: '#65676b',
     marginLeft: 'auto',
   },
+  mapaContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   mapa: {
     width: Dimensions.get('window').width,
-    flex: 1,
+    height: '100%',
   },
   center: {
     flex: 1,
