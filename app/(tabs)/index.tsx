@@ -1,3 +1,4 @@
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -14,6 +15,7 @@ import {
 import MapView, { Callout, Marker } from 'react-native-maps';
 import { FiltrosEspacio, obtenerEspacios } from '../../src/servicios/espacios';
 import { Espacio } from '../../src/tipos/espacio';
+import { calcularDistanciaKm } from '../../src/utils/distancia';
 
 const IMAGEN_DEFAULT =
   'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&auto=format&fit=crop&q=80';
@@ -24,10 +26,34 @@ export default function PantallaCatalogo() {
   const [cargando, setCargando] = useState(true);
   const [vistaMapa, setVistaMapa] = useState(false);
 
+  // Estado de Ubicación del Usuario
+  const [ubicacionUsuario, setUbicacionUsuario] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
   // Estados para filtros
   const [busqueda, setBusqueda] = useState('');
   const [soloTechado, setSoloTechado] = useState(false);
   const [soloIluminado, setSoloIluminado] = useState(false);
+
+  // Obtener permisos y coordenadas GPS del dispositivo
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({});
+          setUbicacionUsuario({
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+          });
+        }
+      } catch (e) {
+        // En emuladores o sin permisos, continúa sin ubicación
+      }
+    })();
+  }, []);
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -45,20 +71,31 @@ export default function PantallaCatalogo() {
     cargarDatos();
   }, [busqueda, soloTechado, soloIluminado]);
 
-  // Coordenadas iniciales centradas en el Polideportivo Municipal de Villaguay
   const regionInicial = {
-    latitude: -31.8495,
-    longitude: -59.0267,
-    latitudeDelta: 0.02,
-    longitudeDelta: 0.02,
+    latitude: ubicacionUsuario?.lat ?? -31.8495,
+    longitude: ubicacionUsuario?.lng ?? -59.0267,
+    latitudeDelta: 0.03,
+    longitudeDelta: 0.03,
   };
 
   const renderItemEspacio = ({ item }: { item: Espacio }) => {
-    // Lee desde item.imagenes[], item.imagenUrl o usa el fallback por defecto
     const urlFoto =
       item.imagenes && item.imagenes.length > 0
         ? item.imagenes[0]
         : (item as any).imagenUrl || IMAGEN_DEFAULT;
+
+    const latCancha = item.coordenadas?.latitud ?? (item as any).latitud;
+    const lngCancha = item.coordenadas?.longitud ?? (item as any).longitud;
+
+    const distancia =
+      ubicacionUsuario && latCancha && lngCancha
+        ? calcularDistanciaKm(
+            ubicacionUsuario.lat,
+            ubicacionUsuario.lng,
+            latCancha,
+            lngCancha
+          )
+        : null;
 
     return (
       <TouchableOpacity
@@ -74,6 +111,11 @@ export default function PantallaCatalogo() {
           <Text style={styles.cardSub}>
             {item.complejo} • {item.superficie || 'Sintético'}
           </Text>
+
+          {distancia !== null && (
+            <Text style={styles.distanciaText}>📍 A {distancia} km de vos</Text>
+          )}
+
           <View style={styles.badgesContainer}>
             {item.techado && <Text style={styles.badge}>Techado</Text>}
             {item.iluminacion && <Text style={styles.badge}>Iluminación</Text>}
@@ -133,8 +175,18 @@ export default function PantallaCatalogo() {
         </View>
       ) : vistaMapa ? (
         <MapView style={styles.mapa} initialRegion={regionInicial}>
+          {ubicacionUsuario && (
+            <Marker
+              coordinate={{
+                latitude: ubicacionUsuario.lat,
+                longitude: ubicacionUsuario.lng,
+              }}
+              title="Tu Ubicación"
+              pinColor="blue"
+            />
+          )}
+
           {espacios.map((espacio) => {
-            // Lee desde coordenadas objeto anidado o fallback
             const lat = espacio.coordenadas?.latitud ?? (espacio as any).latitud ?? -31.8495;
             const lng = espacio.coordenadas?.longitud ?? (espacio as any).longitud ?? -59.0267;
 
@@ -266,6 +318,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#65676b',
     marginTop: 2,
+  },
+  distanciaText: {
+    fontSize: 12,
+    color: '#1877f2',
+    fontWeight: '600',
+    marginTop: 4,
   },
   badgesContainer: {
     flexDirection: 'row',

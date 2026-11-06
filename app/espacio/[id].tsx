@@ -64,6 +64,7 @@ export default function PantallaDetalleEspacio() {
     setReservando(false);
 
     if (resultado.exito) {
+      await reproducirSonidoExito(); //  Efecto sonoro de éxito
       Alert.alert(
         '¡Reserva Confirmada!',
         'Tu turno fue reservado con éxito. Podés revisarlo en la sección Mis Reservas.',
