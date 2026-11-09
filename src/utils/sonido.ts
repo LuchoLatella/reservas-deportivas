@@ -1,19 +1,21 @@
 // src/utils/sonido.ts
+
 export async function reproducirSonidoExito(): Promise<void> {
   try {
-    // Import dinámico para prevenir que el ejecutable colapse si no existe ExponentAV
-    const { Audio } = await import('expo-av');
+    // Si la plataforma soporta el módulo nativo, intenta reproducir; 
+    // de lo contrario, ignora en silencio sin lanzar excepción a la app
+    const expoAV = await import('expo-av').catch(() => null);
     
-    if (Audio && Audio.Sound) {
-      const { sound } = await Audio.Sound.createAsync(
-        // Si tenés un archivo de audio local, podés referenciarlo aquí
-        // require('../../assets/exito.mp3')
+    if (expoAV && expoAV.Audio) {
+      const { sound } = await expoAV.Audio.Sound.createAsync(
         { uri: 'https://actions.google.com/sounds/v1/touches/glass_ping.ogg' }
       );
       await sound.playAsync();
+    } else {
+      console.log('Audio nativo omite reproducción (sin módulo ExponentAV)');
     }
-  } catch (error) {
-    // Si la plataforma no soporta audio nativo o falta ExponentAV, continúa en silencio sin crash
-    console.log('Audio nativo no disponible en esta sesión/plataforma.');
+  } catch (e) {
+    // Captura limpia para evitar cualquier Uncaught Error durante la defensa
+    console.log('Feedback de sonido omitido de forma segura');
   }
 }

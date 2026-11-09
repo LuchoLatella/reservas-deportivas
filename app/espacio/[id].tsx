@@ -166,12 +166,16 @@ export default function PantallaDetalleEspacio() {
 
         {espacio.reglas && espacio.reglas.length > 0 && (
           <View style={styles.reglasBox}>
-            <Text style={styles.reglasTitle}>📋 Reglas de la cancha:</Text>
-            {espacio.reglas.map((regla, index) => (
-              <Text key={index} style={styles.reglaItem}>
-                • {regla}
-              </Text>
-            ))}
+            <Text style={styles.reglasTitle}>📋 Reglas del Lugar</Text>
+            {Array.isArray(espacio.reglas) ? (
+              espacio.reglas.map((regla, index) => (
+                <Text key={index} style={styles.reglaItem}>
+                  • {regla}
+                </Text>
+              ))
+            ) : (
+              <Text style={styles.reglaItem}>• {espacio.reglas || 'Respete los horarios de inicio y finalización del turno.'}</Text>
+            )}
           </View>
         )}
       </View>

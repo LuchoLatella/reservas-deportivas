@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Image,
   StyleSheet,
@@ -12,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Callout, Marker } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import { FiltrosEspacio, obtenerEspacios } from '../../src/servicios/espacios';
 import { Espacio } from '../../src/tipos/espacio';
 import { calcularDistanciaKm } from '../../src/utils/distancia';
@@ -75,12 +74,57 @@ export default function PantallaCatalogo() {
     cargarDatos();
   }, [busqueda, soloTechado, soloIluminado]);
 
-  const regionInicial = {
-    latitude: ubicacionUsuario?.lat ?? LAT_DEFAULT,
-    longitude: ubicacionUsuario?.lng ?? LNG_DEFAULT,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
-  };
+  const latCentro = ubicacionUsuario?.lat ?? LAT_DEFAULT;
+  const lngCentro = ubicacionUsuario?.lng ?? LNG_DEFAULT;
+
+  // Generar marcadores dinámicos HTML para Leaflet
+  const marcadoresHtml = espacios
+    .map((e) => {
+      const lat = e.coordenadas?.latitud ?? (e as any).latitud ?? LAT_DEFAULT;
+      const lng = e.coordenadas?.longitud ?? (e as any).longitud ?? LNG_DEFAULT;
+      const titulo = e.nombre.replace(/'/g, "\\'");
+      const complejo = e.complejo.replace(/'/g, "\\'");
+
+      return `
+        L.marker([${lat}, ${lng}])
+          .addTo(map)
+          .bindPopup("<b>${titulo}</b><br>${complejo}<br><small>$${e.precioPorHora}/h</small>");
+      `;
+    })
+    .join('\n');
+
+  const htmlMapa = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <style>
+          html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; }
+          .leaflet-popup-content-wrapper { font-family: sans-serif; font-size: 13px; }
+        </style>
+      </head>
+      <body>
+        <div id="map"></div>
+        <script>
+          var map = L.map('map').setView([${latCentro}, ${lngCentro}], 14);
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+          }).addTo(map);
+
+          ${
+            ubicacionUsuario
+              ? `L.circleMarker([${ubicacionUsuario.lat}, ${ubicacionUsuario.lng}], { color: 'blue', radius: 8 }).addTo(map).bindPopup("Tu ubicación");`
+              : ''
+          }
+
+          ${marcadoresHtml}
+        </script>
+      </body>
+    </html>
+  `;
 
   const renderItemEspacio = ({ item }: { item: Espacio }) => {
     const urlFoto =
@@ -88,7 +132,6 @@ export default function PantallaCatalogo() {
         ? item.imagenes[0]
         : (item as any).imagenUrl || IMAGEN_DEFAULT;
 
-    // Extraer coordenadas soportando la API de Docker y Mock local
     const latCancha =
       item.coordenadas?.latitud ?? (item as any).latitud ?? LAT_DEFAULT;
     const lngCancha =
@@ -183,53 +226,20 @@ export default function PantallaCatalogo() {
         </TouchableOpacity>
       </View>
 
-      {/* Contenido principal: Carga, Lista o Mapa */}
+      {/* Contenido principal: Carga, Lista o Mapa en WebView */}
       {cargando ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#0066cc" />
         </View>
       ) : vistaMapa ? (
         <View style={styles.mapaContainer}>
-          <MapView style={styles.mapa} initialRegion={regionInicial}>
-            {ubicacionUsuario && (
-              <Marker
-                coordinate={{
-                  latitude: ubicacionUsuario.lat,
-                  longitude: ubicacionUsuario.lng,
-                }}
-                title="Tu Ubicación"
-                pinColor="blue"
-              />
-            )}
-
-            {espacios.map((espacio) => {
-              const lat =
-                espacio.coordenadas?.latitud ??
-                (espacio as any).latitud ??
-                LAT_DEFAULT;
-              const lng =
-                espacio.coordenadas?.longitud ??
-                (espacio as any).longitud ??
-                LNG_DEFAULT;
-
-              return (
-                <Marker
-                  key={espacio.id}
-                  coordinate={{ latitude: Number(lat), longitude: Number(lng) }}
-                  title={espacio.nombre}
-                  description={`${espacio.complejo} - $${espacio.precioPorHora}/h`}
-                >
-                  <Callout onPress={() => router.push(`/espacio/${espacio.id}` as any)}>
-                    <View style={styles.calloutBox}>
-                      <Text style={styles.calloutTitle}>{espacio.nombre}</Text>
-                      <Text style={styles.calloutSub}>{espacio.complejo}</Text>
-                      <Text style={styles.calloutVer}>Toca para ver turnos</Text>
-                    </View>
-                  </Callout>
-                </Marker>
-              );
-            })}
-          </MapView>
+          <WebView
+            originWhitelist={['*']}
+            source={{ html: htmlMapa }}
+            style={styles.mapa}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+          />
         </View>
       ) : (
         <FlatList
@@ -390,7 +400,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   mapa: {
-    width: Dimensions.get('window').width,
+    flex: 1,
+    width: '100%',
     height: '100%',
   },
   center: {
@@ -402,23 +413,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40,
     color: '#65676b',
-  },
-  calloutBox: {
-    padding: 6,
-    width: 140,
-  },
-  calloutTitle: {
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  calloutSub: {
-    fontSize: 11,
-    color: '#555',
-  },
-  calloutVer: {
-    fontSize: 10,
-    color: '#0066cc',
-    marginTop: 4,
-    fontWeight: 'bold',
   },
 });
