@@ -62,9 +62,7 @@ docker-compose up -d
    ▼                                      ▼
 [ API NestJS (Axios + Docker :3000) ]  [ In-Memory Mocks Store ]
 (Bearer Token / JSON Envelopes)        (Mocks locales + Fallback)
-
 Protocolo de Respuestas y Reglas de NegocioFormato Estándar:Éxito (Lista): { "datos": [...], "meta": { "total": 11, "pagina": 1, "porPagina": 20 } }Éxito (Recurso): { "datos": {...}, "meta": null }Error: { "error": { "codigo": "CANCELACION_FUERA_DE_PLAZO", "mensaje": "Faltan menos de cuatro horas: avisale al encargado para cancelar." } }Límite de Reservas: Máximo 3 reservas activas simultáneas por usuario.Cancelación Tardía (< 4 hs): Se contempla un bypass defensivo en la app para solicitar autorización automática de la administración/encargado (confirmarCancelacionTardia) y destrabar la gestión en demostraciones orales.Formateo Dinámico de Horarios: Parseo dinámico de horas de inicio y fin desde la API o fallback calculado a 1 hora de duración.📊 Modelos Principales (src/tipos/)Espacio: id, nombre, deporteId, complejo, superficie, techado, iluminacion, capacidad, precioPorHora, coordenadas (latitud, longitud), imagenes, videoUrl, reglas.Turno: id, espacioId, fecha (AAAA-MM-DD), inicio (HH:MM), fin, estado (libre | reservado | fijo | mantenimiento), reservaId, motivoBloqueo, precio.Reserva: id, turnoId, espacioId, usuarioId, cantidadPersonas, codigoQr, estado (confirmada | cancelada | cumplida | ausente), cancelableHasta.Usuario: id, nombre, email, telefono, rol (jugador | encargado | administrador), espaciosFavoritos, cancelacionesTardias, ausencias.🧪 Pruebas AutomatizadasLa aplicación cuenta con una suite completa de pruebas unitarias y de integración desarrolladas en Jest[cite: 2]:PowerShell# Verificar tipado de TypeScript sin emitir archivos[cite: 1]
-
 npx tsc --noEmit
 
 # Ejecutar la suite completa (54/54 tests en verde)[cite: 2]
