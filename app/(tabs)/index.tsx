@@ -101,7 +101,7 @@ export default function PantallaCatalogo() {
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <style>
-          html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; }
+          html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; background-color: #f4f6f8; }
           .leaflet-popup-content-wrapper { font-family: sans-serif; font-size: 13px; }
         </style>
       </head>
@@ -239,6 +239,12 @@ export default function PantallaCatalogo() {
             style={styles.mapa}
             javaScriptEnabled={true}
             domStorageEnabled={true}
+            startInLoadingState={true}
+            renderLoading={() => (
+              <View style={styles.center}>
+                <ActivityIndicator size="small" color="#0066cc" />
+              </View>
+            )}
           />
         </View>
       ) : (
