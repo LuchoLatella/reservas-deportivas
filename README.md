@@ -111,7 +111,7 @@ export const API_BASE_URL = '[http://10.0.2.2:3000](http://10.0.2.2:3000)';
 npx expo start
 
 🧪 Certificación de Calidad y Compilación
-Verificación de Código y Tests Automatizados
+Verificación de Código y Tests Automatizados de la app
 
 # Validación de tipos en TypeScript
 npx tsc --noEmit
