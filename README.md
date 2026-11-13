@@ -1,50 +1,129 @@
-# Welcome to your Expo app 👋
+# ⚽ SportReserve Mobile — Plataforma Integral de Gestión y Reserva de Espacios Deportivos
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**SportReserve Mobile** es una solución móvil multiplataforma de nivel empresarial diseñada para modernizar y automatizar la administración de complejos deportivos, municipios y clubes. Desarrollada bajo una arquitectura moderna en **React Native y TypeScript**, ofrece una experiencia de usuario fluida, rápida y confiable, conectando a los deportistas con los predios en tiempo real.
 
-## Get started
+---
 
-1. Install dependencies
+## 💡 Propuesta de Valor y Solución de Negocio
 
-   ```bash
-   npm install
-   ```
+* **Gestión Automatizada 24/7:** Elimina la carga administrativa de reservas telefónicas o presenciales mediante una grilla horaria interactiva (08:00 a 24:00 hs) sincronizada en tiempo real.
+* **Control de Ausentismo y Reglas Inteligentes:** Motor de reglas de negocio integrado que limita reservas simultáneas (máx. 3 activas por usuario) y aplica políticas de cancelación dinámica (ventana de 4 horas con flujo de autorización administrativa).
+* **Control de Acceso Sin Contacto:** Generación instantánea de **pases digitales con código QR** y escáner nativo integrado para validar el ingreso en puerta de forma ágil y segura.
+* **Operación Resiliente (Offline-First):** Arquitectura desacoplada con almacenamiento local que garantiza la consulta de reservas y operación continua incluso en predios con baja conectividad.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 📱 Características Principales
 
-In the output, you'll find options to open the app in a
+### Para el Deportista (Jugador)
+* **Exploración y Filtrado Avanzado:** Búsqueda por disciplina deportiva, tipo de superficie, iluminación nocturna, techado y capacidad.
+* **Geolocalización y Mapas Interactivos:** Visualización geográfica de todos los complejos deportivos con cálculo de proximidad, pines interactivos y manejo inteligente de permisos GPS.
+* **Reserva en 3 Pasos:** Selección de turno, confirmación instantánea, feedback háptico nativo y emisión automática de código QR.
+* **Historial y Calificaciones:** Gestión de turnos próximos, historial de asistencia y sistema de valoración de 1 a 5 estrellas para mejora continua del servicio.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Para la Administración (Encargados y Directivos)
+* **Control de Predios y Bloqueos:** Gestión centralizada de mantenimiento, condiciones climáticas (lluvia) y asignación de turnos fijos.
+* **Validación en Puerta:** Lectura de códigos QR mediante la cámara del dispositivo para el registro inmediato de asistencia o ausencias.
+* **Excepciones Administrativas:** Flujo dedicado para aprobar cancelaciones fuera de término sin fricciones operativas.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## 🛠️ Stack Tecnológico y Capacidades Nativas
 
-When you're ready, run:
+La aplicación está construida sobre estándares de la industria móvil para garantizar escalabilidad, seguridad y rendimiento nativo en **Android** e **iOS**:
 
-```bash
-npm run reset-project
-```
+* **Core & Framework:** React Native (Expo SDK 57) con enrutamiento basado en archivos (**Expo Router**).
+* **Lenguaje:** TypeScript (tipado estricto de punta a punta para minimizar errores en producción).
+* **Comunicaciones & API:** Cliente HTTP **Axios** centralizado con interceptores JWT, manejo estandarizado de respuestas y tolerancia a fallos.
+* **Mapas y Geolocalización:** Integración nativa con `expo-location` y `react-native-maps` (con soporte de fallback interactivo) para renderizado fluido de coordenadas, zoom y marcadores personalizados.
+* **Hardware y Sensores:**
+  * **Cámara & QR:** `expo-camera` (`CameraView`) para escaneo óptico de alta velocidad.
+  * **Feedback Sensorial:** `expo-haptics` y `expo-av` para confirmaciones táctiles y sonoras.
+* **Seguridad y Persistencia:**
+  * `expo-secure-store` para el resguardo encriptado de credenciales y tokens de sesión.
+  * `expo-sqlite` para persistencia local estructurada y operación sin conexión.
+* **Calidad de Software (QA):** Suite automatizada con **Jest** (54 pruebas unitarias y de integración certificadas) y análisis estático con `tsc`.
+* **Despliegue:** Pipeline listo para empaquetado nativo en la nube mediante **EAS Build** (generación de binarios `.apk` / `.aab`).
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## 🏗️ Arquitectura del Sistema
 
-To learn more about developing your project with Expo, look at the following resources:
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    APLICACIÓN MÓVIL (Cliente)               │
+│                 React Native + Expo + TypeScript            │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│              CAPA DE SERVICIOS (Patrón Client-Service)      │
+│   [ Espacios ]   [ Turnos ]   [ Reservas ]   [ Seguridad ]  │
+└──────────────┬───────────────────────────────┬──────────────┘
+               │ (Conexión Online)             │ (Modo Resiliencia)
+               ▼                               ▼
+┌──────────────────────────────┐ ┌────────────────────────────┐
+│     API REST (NestJS)        │ │   Almacenamiento Local     │
+│  PostgreSQL + Docker + JWT   │ │  SQLite + SecureStore      │
+└──────────────────────────────┘ └────────────────────────────┘
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
-## Join the community
+🚀 Guía de Despliegue y Arranque Rápido
+1. Requisitos del Entorno
+Node.js (v18 LTS o v24+)
 
-Join our community of developers creating universal apps.
+Docker Desktop (para el despliegue del servidor backend)
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Android Studio (Emulador Pixel 7) o dispositivo físico Android/iOS con Expo Go
+
+2. Levantamiento del Servidor Backend (API + Base de Datos)
+El entorno servidor está contenedorizado para un despliegue inmediato en cualquier infraestructura:
+
+# Ingresar al directorio del servidor
+cd api-reservas-deportivas
+
+# Configurar variables de entorno y levantar servicios
+cp .env.example .env
+docker-compose up -d
+
+3. Instalación y Arranque de la Aplicación Móvil
+
+# Clonar el repositorio e instalar dependencias
+git clone [https://github.com/tu-organizacion/reservas-deportivas.git](https://github.com/tu-organizacion/reservas-deportivas.git)
+cd reservas-deportivas
+npm install
+
+4. Configuración de Conectividad (src/config/env.ts)
+Ajuste el endpoint según el entorno de ejecución deseado:
+
+// Entorno de Emulación Local (Android Studio):
+export const API_BASE_URL = '[http://10.0.2.2:3000](http://10.0.2.2:3000)';
+
+// Entorno de Red Local Wi-Fi (Dispositivos físicos en predio):
+// export const API_BASE_URL = '[http://192.168.0.](http://192.168.0.)X:3000';
+
+// Entorno Producción / Nube:
+// export const API_BASE_URL = '[https://api.tudominio.com](https://api.tudominio.com)';
+
+5. Ejecución de la Aplicación
+
+# Iniciar el servidor de desarrollo Expo
+npx expo start
+
+🧪 Certificación de Calidad y Compilación
+Verificación de Código y Tests Automatizados
+
+# Validación de tipos en TypeScript
+npx tsc --noEmit
+
+# Ejecución de la suite completa de pruebas (54/54 tests aprobados)
+npm test -- --runInBand
+
+Generación de Instalador Nativo (APK para Android)
+
+# Instalar herramienta de compilación y autenticar
+npm install -g eas-cli
+eas login
+
+# Compilar binario listo para distribución
+eas build -p android --profile preview

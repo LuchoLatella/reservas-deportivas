@@ -193,11 +193,15 @@ export const espaciosMock: Espacio[] = [
     coordenadas: {
       latitud: -31.8520,
       longitud: -59.0245,
-    },
-    imagenes: [],
+  },
+    imagenes: [
+      'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1530915534664-4ac6423ca938?w=800&auto=format&fit=crop&q=80',
+    ],
     videoUrl: 'https://example.com/videos/tenis-1.mp4',
     reglas: [
-      'Utilizar calzado adecuado.',
+      'Utilizar calzado adecuado para tenis.',
       'Respetar el horario reservado.',
     ],
     activo: true,

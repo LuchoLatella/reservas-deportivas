@@ -1,13 +1,265 @@
-import { StyleSheet, Text, View } from 'react-native';
+import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { WebView } from 'react-native-webview';
+import { FiltrosEspacio, obtenerEspacios } from '../../src/servicios/espacios';
+import { Espacio } from '../../src/tipos/espacio';
+import { calcularDistanciaKm } from '../../src/utils/distancia';
 
-export default function InicioScreen() {
+const IMAGEN_DEFAULT =
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&auto=format&fit=crop&q=80';
+
+// Coordenadas por defecto (Polideportivo Municipal de Villaguay)
+const LAT_DEFAULT = -31.8495;
+const LNG_DEFAULT = -59.0267;
+
+export default function PantallaCatalogo() {
+  const router = useRouter();
+  const [espacios, setEspacios] = useState<Espacio[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [vistaMapa, setVistaMapa] = useState(false);
+
+  // Estado de Ubicación del Usuario
+  const [ubicacionUsuario, setUbicacionUsuario] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  // Estados para filtros
+  const [busqueda, setBusqueda] = useState('');
+  const [soloTechado, setSoloTechado] = useState(false);
+  const [soloIluminado, setSoloIluminado] = useState(false);
+
+  // Obtener permisos y coordenadas GPS del dispositivo
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({});
+          setUbicacionUsuario({
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+          });
+        }
+      } catch (e) {
+        // En emuladores o sin permisos, continúa sin ubicación de forma limpia
+      }
+    })();
+  }, []);
+
+  const cargarDatos = async () => {
+    setCargando(true);
+    const filtros: FiltrosEspacio = {
+      busqueda: busqueda.trim() || undefined,
+      techado: soloTechado ? true : undefined,
+      iluminacion: soloIluminado ? true : undefined,
+    };
+    const lista = await obtenerEspacios(filtros);
+    setEspacios(lista);
+    setCargando(false);
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, [busqueda, soloTechado, soloIluminado]);
+
+  const latCentro = ubicacionUsuario?.lat ?? LAT_DEFAULT;
+  const lngCentro = ubicacionUsuario?.lng ?? LNG_DEFAULT;
+
+  // Generar marcadores dinámicos HTML para Leaflet
+  const marcadoresHtml = espacios
+    .map((e) => {
+      const lat = e.coordenadas?.latitud ?? (e as any).latitud ?? LAT_DEFAULT;
+      const lng = e.coordenadas?.longitud ?? (e as any).longitud ?? LNG_DEFAULT;
+      const titulo = e.nombre.replace(/'/g, "\\'");
+      const complejo = e.complejo.replace(/'/g, "\\'");
+
+      return `
+        L.marker([${lat}, ${lng}])
+          .addTo(map)
+          .bindPopup("<b>${titulo}</b><br>${complejo}<br><small>$${e.precioPorHora}/h</small>");
+      `;
+    })
+    .join('\n');
+
+  const htmlMapa = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <style>
+          html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; background-color: #f4f6f8; }
+          .leaflet-popup-content-wrapper { font-family: sans-serif; font-size: 13px; }
+        </style>
+      </head>
+      <body>
+        <div id="map"></div>
+        <script>
+          var map = L.map('map').setView([${latCentro}, ${lngCentro}], 14);
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+          }).addTo(map);
+
+          ${
+            ubicacionUsuario
+              ? `L.circleMarker([${ubicacionUsuario.lat}, ${ubicacionUsuario.lng}], { color: 'blue', radius: 8 }).addTo(map).bindPopup("Tu ubicación");`
+              : ''
+          }
+
+          ${marcadoresHtml}
+        </script>
+      </body>
+    </html>
+  `;
+
+  const renderItemEspacio = ({ item }: { item: Espacio }) => {
+    const urlFoto =
+      item.imagenes && item.imagenes.length > 0
+        ? item.imagenes[0]
+        : (item as any).imagenUrl || IMAGEN_DEFAULT;
+
+    const latCancha =
+      item.coordenadas?.latitud ?? (item as any).latitud ?? LAT_DEFAULT;
+    const lngCancha =
+      item.coordenadas?.longitud ?? (item as any).longitud ?? LNG_DEFAULT;
+
+    const distancia =
+      ubicacionUsuario && latCancha && lngCancha
+        ? calcularDistanciaKm(
+            ubicacionUsuario.lat,
+            ubicacionUsuario.lng,
+            latCancha,
+            lngCancha
+          )
+        : null;
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => router.push(`/espacio/${item.id}` as any)}
+      >
+        <Image source={{ uri: urlFoto }} style={styles.cardImagen} resizeMode="cover" />
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>{item.nombre}</Text>
+            <Text style={styles.cardPrecio}>${item.precioPorHora}/h</Text>
+          </View>
+          <Text style={styles.cardSub}>
+            {item.complejo} • {item.superficie || 'Sintético'}
+          </Text>
+
+          {distancia !== null && (
+            <Text style={styles.distanciaText}>📍 A {distancia} km de vos</Text>
+          )}
+
+          <View style={styles.badgesContainer}>
+            {item.techado && <Text style={styles.badge}>Techado</Text>}
+            {item.iluminacion && <Text style={styles.badge}>Iluminación</Text>}
+            <Text style={styles.badgeInfo}>Capacidad: {item.capacidad} pers.</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Reservas Deportivas</Text>
+      {/* Header Destacado */}
+      <View style={styles.headerBanner}>
+        <Text style={styles.headerSaludo}>¡Hola, Jugador! 👋</Text>
+        <Text style={styles.headerSubtitulo}>
+          Encontrá y reservá tu cancha ideal en segundos
+        </Text>
+      </View>
 
-      <Text style={styles.subtitle}>
-        Sistema de reservas de espacios deportivos
-      </Text>
+      {/* Buscador */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.inputBusqueda}
+          placeholder="Buscar por cancha o complejo..."
+          value={busqueda}
+          onChangeText={setBusqueda}
+        />
+      </View>
+
+      {/* Botones de Filtros Rápidos */}
+      <View style={styles.filtrosContainer}>
+        <TouchableOpacity
+          style={[styles.chip, soloTechado && styles.chipActivo]}
+          onPress={() => setSoloTechado(!soloTechado)}
+        >
+          <Text style={[styles.chipText, soloTechado && styles.chipTextActivo]}>
+            Techado
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.chip, soloIluminado && styles.chipActivo]}
+          onPress={() => setSoloIluminado(!soloIluminado)}
+        >
+          <Text style={[styles.chipText, soloIluminado && styles.chipTextActivo]}>
+            Con Luz
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.toggleVistaBtn}
+          onPress={() => setVistaMapa(!vistaMapa)}
+        >
+          <Text style={styles.toggleVistaText}>
+            {vistaMapa ? 'Ver Lista' : 'Ver Mapa'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Contenido principal: Carga, Lista o Mapa en WebView */}
+      {cargando ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#0066cc" />
+        </View>
+      ) : vistaMapa ? (
+        <View style={styles.mapaContainer}>
+          <WebView
+            originWhitelist={['*']}
+            source={{ html: htmlMapa }}
+            style={styles.mapa}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+            renderLoading={() => (
+              <View style={styles.center}>
+                <ActivityIndicator size="small" color="#0066cc" />
+              </View>
+            )}
+          />
+        </View>
+      ) : (
+        <FlatList
+          data={espacios}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItemEspacio}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              No se encontraron canchas con los filtros seleccionados.
+            </Text>
+          }
+        />
+      )}
     </View>
   );
 }
@@ -15,17 +267,157 @@ export default function InicioScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
+    backgroundColor: '#f4f6f8',
   },
-  title: {
-    fontSize: 28,
+  headerBanner: {
+    backgroundColor: '#0066cc',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 14,
+  },
+  headerSaludo: {
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 12,
+    color: '#ffffff',
   },
-  subtitle: {
+  headerSubtitulo: {
+    fontSize: 13,
+    color: '#e0e0e0',
+    marginTop: 2,
+  },
+  searchContainer: {
+    padding: 12,
+    backgroundColor: '#fff',
+  },
+  inputBusqueda: {
+    backgroundColor: '#f0f2f5',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    fontSize: 14,
+  },
+  filtrosContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#e4e6eb',
+  },
+  chipActivo: {
+    backgroundColor: '#0066cc',
+  },
+  chipText: {
+    fontSize: 13,
+    color: '#333',
+  },
+  chipTextActivo: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  toggleVistaBtn: {
+    marginLeft: 'auto',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: '#2e7d32',
+    borderRadius: 20,
+  },
+  toggleVistaText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  listContainer: {
+    padding: 12,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 14,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  cardImagen: {
+    width: '100%',
+    height: 140,
+  },
+  cardContent: {
+    padding: 14,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardTitle: {
     fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1c1e21',
+  },
+  cardPrecio: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#2e7d32',
+  },
+  cardSub: {
+    fontSize: 13,
+    color: '#65676b',
+    marginTop: 2,
+  },
+  distanciaText: {
+    fontSize: 12,
+    color: '#1877f2',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  badgesContainer: {
+    flexDirection: 'row',
+    marginTop: 10,
+    gap: 6,
+    alignItems: 'center',
+  },
+  badge: {
+    fontSize: 11,
+    backgroundColor: '#e7f3ff',
+    color: '#1877f2',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    fontWeight: '600',
+  },
+  badgeInfo: {
+    fontSize: 11,
+    color: '#65676b',
+    marginLeft: 'auto',
+  },
+  mapaContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  mapa: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
     textAlign: 'center',
+    marginTop: 40,
+    color: '#65676b',
   },
 });
