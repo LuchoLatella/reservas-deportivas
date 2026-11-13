@@ -78,7 +78,7 @@ export default function PantallaMisReservas() {
   const renderItemReserva = ({ item }: { item: Reserva }) => {
     const esProxima = item.estado === 'confirmada' && pestana === 'proximas';
 
-    const fechaMostrar = (item as any).fecha || item.creadoEn?.split('T')[0] || 'Fecha programada';
+    const fechaMostrar = (item as any).fecha || item.creadaEn?.split('T')[0] || 'Fecha programada';
     const horaInicioMostrar = (item as any).horaInicio || (item as any).turno?.horaInicio || '18:00';
     const horaFinMostrar = (item as any).horaFin || (item as any).turno?.horaFin || '19:00';
 

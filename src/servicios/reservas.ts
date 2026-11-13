@@ -14,7 +14,7 @@ export async function obtenerReservasUsuario(cuando: 'proximas' | 'pasadas' = 'p
       }
     } catch {}
   }
-  return reservasMock;
+  return reservasMock.filter((r) => (cuando === 'proximas' ? r.estado === 'confirmada' : r.estado !== 'confirmada'));
 }
 
 export async function obtenerReservasPorUsuario(usuarioId: string): Promise<Reserva[]> {
@@ -80,7 +80,12 @@ export async function crearReserva(
     throw new Error('El usuario no existe.');
   }
 
-  if (typeof cantidadPersonas !== 'number' || isNaN(cantidadPersonas) || cantidadPersonas <= 0 || !Number.isInteger(cantidadPersonas)) {
+  if (
+    typeof cantidadPersonas !== 'number' ||
+    isNaN(cantidadPersonas) ||
+    cantidadPersonas <= 0 ||
+    !Number.isInteger(cantidadPersonas)
+  ) {
     throw new Error('La cantidad de personas debe ser un número entero positivo.');
   }
 
@@ -128,8 +133,15 @@ export async function crearReserva(
   if (!hFin) {
     const [hStr, mStr] = hInicio.split(':');
     const horaNum = parseInt(hStr, 10);
-    hFin = isNaN(horaNum) ? '19:00' : `${String((horaNum + 1) % 24).padStart(2, '0')}:${mStr || '00'}`;
+    hFin = isNaN(horaNum)
+      ? '19:00'
+      : `${String((horaNum + 1) % 24).padStart(2, '0')}:${mStr || '00'}`;
   }
+
+  const fechaHoraTurno = new Date(`${turno.fecha}T${hInicio}:00`);
+  const cancelableHasta = !isNaN(fechaHoraTurno.getTime())
+    ? new Date(fechaHoraTurno.getTime() - 4 * 60 * 60 * 1000).toISOString()
+    : undefined;
 
   const idNueva = `res-${Date.now()}`;
   const nuevaReserva: any = {
@@ -142,7 +154,8 @@ export async function crearReserva(
     horaFin: hFin,
     estado: 'confirmada',
     codigoQr: `QR-${Date.now()}`,
-    creadoEn: new Date().toISOString(),
+    creadaEn: new Date().toISOString(),
+    cancelableHasta,
   };
 
   reservasMock.push(nuevaReserva);
@@ -168,7 +181,6 @@ export async function cancelarReserva(
       if (reservaLocal) reservaLocal.estado = 'cancelada';
       return { exito: true, cancelada: true, requiereEncargado: false, reserva: reservaLocal };
     } catch (err: any) {
-      // Si la API en Docker responde con error 400 (< 4hs), ejecutamos la cancelación del encargado
       try {
         await clienteApi(`/reservas/${reservaId}/confirmar-cancelacion-tardia`, {
           method: 'POST',
@@ -187,15 +199,52 @@ export async function cancelarReserva(
 
   const reserva = reservasMock.find((r) => r.id === reservaId);
   if (!reserva) {
-    throw new Error('Reserva no encontrada');
+    throw new Error('Reserva no encontrada.');
+  }
+
+  if (reserva.usuarioId !== usuarioId) {
+    throw new Error('No podés cancelar una reserva de otro usuario.');
+  }
+
+  if (reserva.estado !== 'confirmada') {
+    throw new Error('La reserva ya no está confirmada.');
+  }
+
+  const turno = turnosMock.find((t) => t.id === reserva.turnoId);
+  if (!turno || turno.reservaId !== reserva.id) {
+    throw new Error('No existe una vinculación válida entre el turno y la reserva.');
+  }
+
+  const ahora = new Date();
+  let fueraDePlazo = false;
+
+  if (reserva.cancelableHasta) {
+    const limite = new Date(reserva.cancelableHasta);
+    if (!isNaN(limite.getTime()) && ahora > limite) {
+      fueraDePlazo = true;
+    }
+  } else {
+    const fechaTurno = turno.fecha;
+    const horaInicio = (turno as any).horaInicio || turno.inicio || '18:00';
+    const fechaHoraTurno = new Date(`${fechaTurno}T${horaInicio}:00`);
+    const diferenciaHoras = (fechaHoraTurno.getTime() - ahora.getTime()) / (1000 * 60 * 60);
+    if (diferenciaHoras < 4) {
+      fueraDePlazo = true;
+    }
+  }
+
+  if (fueraDePlazo) {
+    return {
+      exito: true,
+      cancelada: false,
+      requiereEncargado: true,
+      reserva,
+    };
   }
 
   reserva.estado = 'cancelada';
-  const turno = turnosMock.find((t) => t.id === reserva.turnoId);
-  if (turno) {
-    turno.estado = 'libre';
-    turno.reservaId = null;
-  }
+  turno.estado = 'libre';
+  turno.reservaId = null;
 
   return {
     exito: true,
